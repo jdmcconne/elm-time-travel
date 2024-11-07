@@ -47,35 +47,43 @@ viewWithTimeTravel rawGame computer model =
       ]
 
 updateWithTimeTravel rawGame computer model =
-    let
-        rawModel = 
-            if model.paused && computer.mouse.down then
-                model.rawModel
-            else
-                rawGame.updateState computer model.rawModel
-        paused =
-            if keyPressed "T" computer then
-                True
-            else if keyPressed "R" computer then
-                False
-            else 
-                model.paused
-        history =
-            if paused then
-                model.history
-            else
-                model.history ++ [computer]
-        historyPlaybackPosition = 
-            if paused && computer.mouse.down then
-                    min (mousePosToHistoryIndex computer) (List.length history)
-            else
-                (List.length model.history) + 1
-    in
-        {model | rawModel = rawModel
-        , paused = paused
-        , history = history
-        , historyPlaybackPosition = historyPlaybackPosition
-        }
+    if model.paused && computer.mouse.down then
+        let
+            historyPlaybackPosition = min (mousePosToHistoryIndex computer) (List.length model.history)
+            replayHistory pastInputs = List.foldl rawGame.updateState rawGame.initialState pastInputs
+        in 
+            {model | historyPlaybackPosition = historyPlaybackPosition
+            , rawModel = replayHistory (List.take historyPlaybackPosition model.history)}
+    else if model.paused then
+        if keyPressed "T" computer then
+            {model | paused = True}
+        else if keyPressed "R" computer then
+            {model | paused = False
+            , history = List.take model.historyPlaybackPosition model.history
+            }
+        else
+            model
+
+    else
+        let
+            rawModel = rawGame.updateState computer model.rawModel
+            paused =
+                if keyPressed "T" computer then
+                    True
+                else if keyPressed "R" computer then
+                    False
+                else 
+                    model.paused
+            history = model.history ++ [computer]
+            historyPlaybackPosition = (List.length model.history) + 1
+        in
+            {model | rawModel = rawModel
+            , paused = paused
+            , history = history
+            , historyPlaybackPosition = historyPlaybackPosition
+            }
+    
+
   
   
 
